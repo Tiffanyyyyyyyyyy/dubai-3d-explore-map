@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Dubai 3D: Enhanced Cinematic Experience</title>
+    <style>
+        :root {
+            --amber: #ffb300;
+            --bg: rgba(20, 26, 41, 0.95);
+            --border: rgba(255, 179, 0, 0.4);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #bfe3fc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #fff; }
+        #canvas-container { width: 100%; height: 100%; position: absolute; z-index: 1; }
+        
+        .hud-layer { position: absolute; z-index: 10; pointer-events: none; width: 100%; height: 100%; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        .interactive { pointer-events: auto; }
+        
+        header { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
+        .title h1 { font-size: 26px; font-weight: 400; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 2px 8 meter rgba(0,0,0,0.4); color: #fff; }
+        .title p { font-size: 11px; color: var(--amber); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+        
+        .mode-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .mode-btn { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 6px 12px; border-radius: 4px; font-size: 11px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s; backdrop-filter: blur(4px); }
+        .mode-btn:hover { background: rgba(0,0,0,0.7); border-color: var(--amber); }
+        .mode-btn.active { background: rgba(255,179,0,0.3); border-color: var(--amber); color: var(--amber); box-shadow: 0 0 10px rgba(255,179,0,0.3); }
+
+        /* Desktop Navigation Layout Container */
+        .nav-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; width: 260px; backdrop-filter: blur(10px); max-height: 50%; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: transform 0.3s ease; }
+        .nav-header { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #bbb; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .menu-list { list-style: none; overflow-y: auto; padding: 6px 0; }
+        .menu-item { padding: 10px 14px; font-size: 13px; color: #eee; cursor: pointer; transition: all 0.15s ease; display: flex; justify-content: space-between; }
+        .menu-item:hover { background: rgba(255,179,0,0.12); color: #fff; }
+        .menu-item.active { background: rgba(255,179,0,0.2); color: var(--amber); border-left: 3px solid var(--amber); font-weight: 600; }
+        
+        .card-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
+        .info-card { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 20px; backdrop-filter: blur(10px); display: none; flex-direction: column; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); pointer-events: auto; width: 320px; position: absolute; right: 20px; top: 120px; transition: transform 0.3s ease; }
+        .info-card h2 { font-size: 19px; font-weight: 500; color: var(--amber); letter-spacing: 0.5px; }
+        .info-card p { font-size: 13px; color: #f0f0f5; line-height: 1.5; text-align: justify; overflow-y: auto; max-height: 200px; }
+        
+        .read-more-toggle { color: var(--amber); cursor: pointer; font-weight: 600; margin-left: 4px; display: inline-block; text-decoration: underline; }
+        
+        .btn-row { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+        .btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 10px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; }
+        .btn:hover { background: rgba(255,255,255,0.18); border-color: var(--amber); }
+        .btn-accent { background: rgba(255,179,0,0.25); border-color: var(--amber); color: var(--amber); font-weight: 600; }
+
+        /* Control Hints Display Box */
+        .control-hint { background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: 20px; font-size: 11px; letter-spacing: 0.5px; color: #eee; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.15); align-self: center; margin-bottom: 10px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+        /* Spatial HTML Coordinate Label Pins */
+        #labels-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+        .spatial-label { position: absolute; transform: translate(-50%, -100%); background: rgba(12, 16, 28, 0.85); border: 1px solid var(--border); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 500; color: #fff; pointer-events: auto; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.4); transition: opacity 0.2s, transform 0.2s; }
+        .spatial-label:hover { border-color: #fff; background: var(--bg); transform: translate(-50%, -105%) scale(1.05); color: var(--amber); }
+
+        #loader { position: absolute; width: 100%; height: 100%; background: #0c1524; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s ease; }
+        .spin { width: 40px; height: 40px; border: 3px solid rgba(255,179,0,0.1); border-radius: 50%; border-top-color: var(--amber); animation: s 0.8s linear infinite; }
+        @keyframes s { to { transform: rotate(360deg); } }
+
+        /* Responsive Mobile Refactor: Collapsible Bottom Sheet Structure */
+        @media (max-width: 768px) {
+            .nav-panel { position: absolute; bottom: 0; left: 0; width: 100%; max-height: 40px; border-radius: 12px 12px 0 0; border-bottom: none; transform: translateY(0); z-index: 30; }
+            .nav-panel.expanded { max-height: 50%; }
+            .nav-header { cursor: pointer; padding: 12px 20px; }
+            .nav-header::after { content: '▲'; font-size: 9px; color: var(--amber); transition: transform 0.3s; }
+            .nav-panel.expanded .nav-header::after { transform: rotate(180deg); }
+            
+            .info-card { width: calc(100% - 40px); bottom: 55px; left: 20px; top: auto; max-height: 35% !important; cursor: pointer; }
+            .control-hint { display: none; }
+            header { flex-direction: column; gap: 8px; }
+
+            /* Title-only by default; tap the card to reveal the description */
+            #card-desc-container { display: none; }
+            .info-card.expanded #card-desc-container { display: block; }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="loader"><div class="spin"></div></div>
+    <div id="canvas-container"></div>
+    <div id="labels-container" class="interactive"></div>
+
+    <div class="hud-layer">
+        <header>
+            <div class="title">
+                <h1>Dubai 3D</h1>
+                <p>Explore Dubai’s iconic skyline.</p>
+                <div class="mode-selector interactive" id="tour-controls-wrapper">
+                    <button id="btn-mode-explore" class="mode-btn active">Explore Mode</button>
+                    <button id="btn-mode-tour" class="mode-btn">Helicopter Tour</button>
+                    <button id="btn-mode-yacht" class="mode-btn">Yacht Tour</button>
+                    <!-- Dedicated Operational Tour Controls Group -->
+                    <button id="btn-tour-prev" class="mode-btn tour-ctrl" style="display:none;">⏮</button>
+                    <button id="btn-tour-pause" class="mode-btn tour-ctrl" style="display:none;">Pause</button>
+                    <button id="btn-tour-next" class="mode-btn tour-ctrl" style="display:none;">⏭</button>
+                    <button id="btn-tour-mute" class="mode-btn tour-ctrl" style="display:none;">Mute</button>
+                    <button id="btn-tour-exit" class="mode-btn tour-ctrl" style="display:none; border-color: #ff4444; color: #ff4444;">Exit</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="nav-panel interactive" id="landmark-panel">
+            <div class="nav-header" id="sheet-trigger">Select Destination</div>
+            <ul class="menu-list" id="menu-list"></ul>
+        </div>
+
+        <div class="control-hint interactive">
+            Drag to rotate | Scroll to zoom | Right-drag to pan
+        </div>
+    </div>
+
+    <div class="card-wrapper">
+        <div class="info-card" id="info-card">
+            <h2 id="card-title">Landmark</h2>
+            <div id="card-desc-container">
+                <p id="card-desc">Description</p>
+            </div>
+            <div class="btn-row">
+                <button class="btn" id="card-close">Close details</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION MATRIX ---
+        const LANDMARKS_CONFIG = [
+            { 
+                id: "moft", 
+                name: "Museum of the Future", 
+                pos: [220, 2, 160], 
+                lblOffset: 58,
+                cam: [-45, 65, -95], 
+                desc: "The Museum of the Future is an architectural and engineering landmark standing 77 meters tall along Sheikh Zayed Road on the mainland sand plateau. Designed by Killa Design, the structure is an asymmetric torus wrapped in a shimmering stainless steel facade composed of 1,024 individual fire-retardant composite panels. The ring-shaped design represents humanity, the green hill podium signifies the earth, and the central void symbolizes the unknown future." 
+            },
+            { 
+                id: "burjk", 
+                name: "Burj Khalifa & Downtown", 
+                pos: [0, 2, 220], 
+                lblOffset: 236,
+                cam: [-150, 240, -280], 
+                desc: "Burj Khalifa is the world's tallest building, rising 828 meters (2,717 feet) with 163 floors deep on the sand-covered mainland. Designed by Adrian Smith of Skidmore, Owings & Merrill, its architectural layout features a triple-petal footprint inspired by the Hymenocallis desert flower. It forms the centerpiece of Downtown Dubai, surrounded by the iconic 3.5km Sheikh Mohammed bin Rashid Boulevard loop, the expansive 30-acre man-made Burj Lake featuring the choreographed Dubai Fountain system, and the dhow-shaped structural wedge of the Dubai Opera house." 
+            },
+            { 
+                id: "burja", 
+                name: "Burj Al Arab", 
+                pos: [-140, 0, -60], 
+                lblOffset: 72,
+                cam: [90, 85, -115], 
+                desc: "Burj Al Arab Jumeirah is a globally recognized ultra-luxury hotel standing 321 meters tall on a bespoke artificial sand island extending out into the turquoise sea from the curving coastline. Opened in 1999 and designed by architect Tom Wright of Atkins, its iconic silhouette mimics the billowing sail of a traditional Arabian dhow cruise boat. Notable features include a dramatic cantilevered helipad hovering 212 meters above the sea." 
+            },
+            { 
+                id: "palm", 
+                name: "Palm Jumeirah", 
+                pos: [-320, 0, -10], 
+                lblOffset: 14,
+                cam: [0, 250, -190], 
+                desc: "Palm Jumeirah is a monumental man-made archipelago and one of the largest land reclamation projects in human history, stretching far into the sparkling turquoise open waters. Developed by Nakheel, it is structured symmetrically to mimic a palm tree, consisting of a 2-kilometer trunk road artery, 17 radiating fronds layered with luxury residential beachfront villas, and an outer 11-kilometer crescent breakwater that acts as a protective reef against open Gulf wave action." 
+            },
+            { 
+                id: "ain", 
+                name: "Ain Dubai & Bluewaters", 
+                pos: [-520, 0, -85], 
+                lblOffset: 72,
+                cam: [85, 100, -115], 
+                desc: "Ain Dubai is the world's largest and tallest observation wheel, soaring to an unprecedented height of over 250 meters (820 feet) on Bluewaters Island out in the turquoise sea layer. The entire apparatus is supported by four giant A-frame steel legs anchoring it deep into the reclaimed bedrock of Bluewaters Island—a premium lifestyle offshore district seamlessly connected to the JBR beachfront via a modern pedestrian and vehicle transit bridge network." 
+            }
+        ];
+
+        class SeededRandom {
+            constructor(seed = 98765) { this.seed = seed; }
+            next() {
+                this.seed = (this.seed * 1664525 + 1013904223) % 4294967296;
+                return this.seed / 4294967296;
+            }
+            range(min, max) { return min + this.next() * (max - min); }
+        }
+        const rng = new SeededRandom(112233);
+
+        let scene, camera, renderer, controls, clock;
+        let worldGroup; // Mirrors the map left-to-right (X only); land/sea (Z) is untouched
+        let interactiveMeshes = [];
+        let backgroundMeshInstance;
+        // --- ONE SUN SYSTEM: a single fixed anchor point, added directly to `scene` (not the
+        // mirrored worldGroup), so there is exactly one direction/position driving the light,
+        // the visible disc+glow, and the single water reflection — no separate mirrored-vs-world
+        // conversions to keep in sync, which was the source of earlier alignment bugs.
+        const SUN_WORLD_POS = new THREE.Vector3(-1050, 330, -2050);
+        let currentMode = "explore";
+        let activeId = null;
+        let hoveredMesh = null;
+        let hoverSavedMaterialColors = null; // per-material save so shared materials restore correctly
+        
+        let tourActive = false;
+        let tourSpline = null;
+        let tourTime = 0;
+        const HELI_TOUR_DURATION = 42.0;  // slightly faster pace, more aerial feel
+        const YACHT_TOUR_DURATION = 62.0; // slower, calmer cruise
+        let splineLookTargets = [];
+
+        // --- YACHT TOUR: shares tourActive/tourTime/pause/mute/exit with the Helicopter Tour;
+        // the spline, look targets and camera-motion style differ (see activeTourType below).
+        let activeTourType = 'heli'; // 'heli' | 'yacht'
+        const YACHT_ROUTE = ['ain', 'palm', 'burja', 'burjk', 'moft']; // Ain Dubai -> Palm -> Burj Al Arab -> Downtown -> MOTF, used for the info-card lookup only
+
+        // Explicit, hand-placed coastal waypoints (NOT derived from landmark camera offsets).
+        // West -> East, strictly increasing X throughout. Each z was chosen to clear the actual
+        // built geometry with a wide safety margin — see QA notes for the clearance figures
+        // (Bluewaters island footprint, Palm crescent/fronds/trunk/Atlantis, Burj Al Arab island,
+        // and every bridge pier). y is a low, near-sea-level camera height.
+        const YACHT_WAYPOINTS = [
+            { x: -640, y: 9, z: -190, look: 'ain'   },
+            { x: -560, y: 9, z: -185, look: 'ain'   },
+            { x: -520, y: 9, z: -165, look: 'ain'   }, // closest approach to Ain Dubai/Bluewaters
+            { x: -460, y: 8, z: -190, look: 'ain'   },
+            { x: -400, y: 8, z: -215, look: 'palm'  },
+            { x: -320, y: 8, z: -220, look: 'palm'  }, // closest approach to Palm Jumeirah
+            { x: -260, y: 8, z: -205, look: 'palm'  },
+            { x: -200, y: 8, z: -175, look: 'burja' },
+            { x: -140, y: 8, z: -150, look: 'burja' }, // closest approach to Burj Al Arab
+            { x:  -70, y: 8, z: -165, look: 'burja' },
+            { x:  -20, y: 9, z: -150, look: 'burjk' },
+            { x:    0, y: 9, z: -130, look: 'burjk' }, // closest approach to Downtown/Burj Khalifa
+            { x:   90, y: 9, z: -140, look: 'burjk' },
+            { x:  160, y: 9, z: -150, look: 'moft'  },
+            { x:  220, y: 9, z: -140, look: 'moft'  }, // closest approach to Museum of the Future
+            { x:  290, y: 9, z: -155, look: 'moft'  }
+        ];
+        let yachtSpline = null;
+        let yachtDirection = 1; // 1 = forward (west->east), -1 = reverse; flips at each end of the non-closed route instead of looping
+        let currentBank = 0; // smoothed helicopter roll angle (radians), eased toward target each frame so turns never snap
+        let yachtLookTargets = [];
+        let yachtLookIds = [];
+        let YACHT_ROUTE_CFGS = [];
+
+        let tourPaused = false;
+        let returningToTour = false;
+        let pausedTourTime = 0;
+        let savedTourPosition = new THREE.Vector3();
+        let savedTourLookTarget = new THREE.Vector3();
+        let isMuted = false;
+        let fullDescriptionExpanded = false;
+
+        let targetCamPos = new THREE.Vector3(-260, 300, -560);
+        let targetLookAt = new THREE.Vector3(-120, 4, 60);
+        let currentLookAt = new THREE.Vector3(-120, 4, 60);
+        let isInterpolating = false; // Free explore: never auto-move unless a landmark is explicitly selected
+
+        let audioCtx, heliNodes = null, yachtNodes = null, activeAudioTour = null; // activeAudioTour tracks which sound is currently audible, so switching tours always stops the old one first
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            clock = new THREE.Clock();
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xbfe3fc);
+            scene.fog = new THREE.FogExp2(0xbfe3fc, 0.00065);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 2, 4000);
+            camera.position.copy(targetCamPos);
+            scene.add(camera); // needed so the yacht-bow mesh (parented to the camera) renders
+
+            yachtBowGroup = buildYachtBow();
+            camera.add(yachtBowGroup);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.02; // Full tilt range, stops just above horizon
+            controls.minDistance = 12;                   // Zoom in close anywhere
+            controls.maxDistance = 2400;                 // Zoom out to see all of Dubai
+            controls.target.copy(currentLookAt);
+
+            controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+            controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+
+            controls.addEventListener('start', () => {
+                if (currentMode === "explore") {
+                    isInterpolating = false; 
+                    if (activeId !== null) {
+                        activeId = null;
+                        document.getElementById('info-card').style.display = 'none';
+                        document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                    }
+                }
+            });
+
+            setupIlluminationEngine();
+
+            // Everything below is mirrored left-to-right as a unit (X only; land/sea Z is untouched).
+            // Hero landmarks are NOT parented here — their mirrored world position is baked directly
+            // into LANDMARKS_CONFIG so camera targeting, raycasting and labels stay in sync.
+            worldGroup = new THREE.Group();
+            worldGroup.scale.x = -1;
+            scene.add(worldGroup);
+
+            buildEnvironment();
+            buildHighways();
+            buildHeroLandmarks();
+            buildBackgroundScenery();
+            buildDistrictSurroundings();
+            
+            buildUI();
+            setupInteractionPipelines();
+            setupTourPath();
+            setupYachtPath();
+
+            window.addEventListener('resize', onResize, false);
+
+            const loader = document.getElementById('loader');
+            loader.style.opacity = 0;
+            setTimeout(() => loader.style.display = 'none', 400);
+
+            animate();
+        }
+
+        function setupIlluminationEngine() {
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            // Sun sits over the Gulf (negative z = open sea), so light rakes in from offshore.
+            // Direction is derived from the single SUN_WORLD_POS anchor so the light always
+            // matches the visible sun disc and its water reflection exactly.
+            const sunLight = new THREE.DirectionalLight(0xffeed2, 1.6);
+            sunLight.position.copy(SUN_WORLD_POS).normalize().multiplyScalar(1100);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            scene.add(sunLight);
+
+            const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0xd8c49a, 0.45);
+            scene.add(hemisphereLight);
+        }
+
+        // Simple low-poly yacht bow, parented to the camera so it always sits at the bottom of
+        // the view like a boat's foredeck. Two meshes only (mobile-friendly). Shown only during
+        // the Yacht Tour via yachtBowGroup.visible, toggled in the tour button handlers.
+        let yachtBowGroup;
+        function buildYachtBow() {
+            const group = new THREE.Group();
+            const hullMat = new THREE.MeshStandardMaterial({ color: 0xf2ede2, roughness: 0.55, metalness: 0.05, fog: false });
+            const trimMat = new THREE.MeshStandardMaterial({ color: 0x1c2733, roughness: 0.6, fog: false });
+
+            // Pointed bow: a flattened, stretched cone pointing forward (-Z, the camera's look direction)
+            const bowGeo = new THREE.ConeGeometry(2.4, 8.5, 4);
+            bowGeo.rotateX(Math.PI / 2);
+            bowGeo.rotateY(Math.PI / 4);
+            bowGeo.scale(1, 0.5, 1);
+            const bow = new THREE.Mesh(bowGeo, hullMat);
+            bow.position.set(0, 0, -5.5);
+            group.add(bow);
+
+            // Low rail strip for a touch of detail
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.22, 2.6), trimMat);
+            rail.position.set(0, 0.85, -2.6);
+            group.add(rail);
+
+            group.position.set(0, -3.2, -5); // bottom-front of the view
+            group.renderOrder = 10;
+            group.visible = false;
+            return group;
+        }
+
+        function buildEnvironment() {
+            // Blue Gulf water (sea occupies negative z, mainland positive z)
+            const waterMat = new THREE.MeshStandardMaterial({ color: 0x1470b4, roughness: 0.08, metalness: 0.55, flatShading: true });
+            const water = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), waterMat);
+            water.rotation.x = -Math.PI / 2;
+            water.receiveShadow = true;
+            scene.add(water);
+
+            // Sand-coloured mainland: thin slab so buildings and roads sit flush on top (surface at y ~= 2.1)
+            const sandMat = new THREE.MeshStandardMaterial({ color: 0xd6b178, roughness: 0.85, metalness: 0.0 });
+            const landShape = new THREE.Shape();
+            landShape.moveTo(-2500, -2000); landShape.lineTo(-2500, 0);     
+            landShape.bezierCurveTo(-1200, -40, -600, 30, 0, 0);
+            landShape.bezierCurveTo(400, -25, 800, -60, 1400, -15);
+            landShape.bezierCurveTo(1800, -5, 2200, 20, 2500, 0);
+            landShape.lineTo(2500, -2000); landShape.lineTo(-2500, -2000);
+
+            const landGeo = new THREE.ExtrudeGeometry(landShape, { depth: 2, bevelEnabled: false });
+            const land = new THREE.Mesh(landGeo, sandMat);
+            land.rotation.x = -Math.PI / 2;
+            land.position.set(0, 0.1, 0); 
+            land.receiveShadow = true;
+            worldGroup.add(land);
+
+            // --- ONE SUN SYSTEM: disc + glow + single reflection, all anchored to SUN_WORLD_POS
+            // and added directly to `scene` (not the mirrored worldGroup) so there is no separate
+            // local/world conversion to keep in sync. depthTest is off on all three pieces — they
+            // represent something effectively at infinity over the open Gulf, so they always draw
+            // correctly regardless of camera distance/angle (this is what fixes the sun vanishing
+            // at some zoom levels/tour angles: previously it was depth-tested like a normal nearby
+            // object, so it could be clipped or lost once the camera passed roughly its distance).
+            const sunDisc = new THREE.Mesh(
+                new THREE.SphereGeometry(65, 24, 24),
+                new THREE.MeshBasicMaterial({ color: 0xfff3cf, fog: false, depthTest: false, depthWrite: false })
+            );
+            sunDisc.position.copy(SUN_WORLD_POS);
+            sunDisc.renderOrder = -2;
+            scene.add(sunDisc);
+
+            // Soft radial glow around the sun (always faces camera) — part of "one visible sun", not a second reflection
+            const glowCanvas = document.createElement('canvas');
+            glowCanvas.width = glowCanvas.height = 128;
+            const gctx = glowCanvas.getContext('2d');
+            const grad = gctx.createRadialGradient(64, 64, 4, 64, 64, 64);
+            grad.addColorStop(0, 'rgba(255, 244, 214, 0.9)');
+            grad.addColorStop(0.35, 'rgba(255, 224, 160, 0.35)');
+            grad.addColorStop(1, 'rgba(255, 210, 130, 0)');
+            gctx.fillStyle = grad; gctx.fillRect(0, 0, 128, 128);
+            const glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                map: new THREE.CanvasTexture(glowCanvas),
+                transparent: true, depthWrite: false, depthTest: false, fog: false, blending: THREE.AdditiveBlending
+            }));
+            glowSprite.scale.set(720, 720, 1);
+            glowSprite.position.copy(SUN_WORLD_POS);
+            glowSprite.renderOrder = -1;
+            scene.add(glowSprite);
+
+            // Single water reflection: one elongated sun-glitter streak, statically aligned to the
+            // exact same SUN_WORLD_POS (no stale/mismatched numbers) and no longer repositioned
+            // every frame — that per-frame "camera-aware" tracking could drag it right under a low
+            // camera (e.g. the yacht) where a billboard texture reads as pixelated up close. A
+            // single well-placed, generously long streak reads correctly from Explore, Helicopter
+            // and Yacht alike. depthTest is off so it never z-fights with the water plane at the
+            // low grazing angles the yacht camera uses (that flicker was part of the "pixelated"
+            // look), and high-res filtering + anisotropy keep the gradient itself smooth.
+            const streakCanvas = document.createElement('canvas');
+            streakCanvas.width = 256; streakCanvas.height = 1024;
+            const sctx = streakCanvas.getContext('2d');
+            const sGrad = sctx.createRadialGradient(128, 512, 16, 128, 512, 512);
+            sGrad.addColorStop(0, 'rgba(255, 240, 200, 0.85)');
+            sGrad.addColorStop(0.5, 'rgba(255, 226, 160, 0.28)');
+            sGrad.addColorStop(1, 'rgba(255, 220, 150, 0)');
+            sctx.save(); sctx.translate(128, 512); sctx.scale(0.25, 1); sctx.translate(-128, -512);
+            sctx.fillStyle = sGrad; sctx.fillRect(-400, 0, 1024, 1024);
+            sctx.restore();
+            const streakTexture = new THREE.CanvasTexture(streakCanvas);
+            streakTexture.minFilter = THREE.LinearMipmapLinearFilter;
+            streakTexture.magFilter = THREE.LinearFilter;
+            streakTexture.generateMipmaps = true;
+            streakTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            const streakGeo = new THREE.PlaneGeometry(300, 2600); // long enough to read from near shore all the way out toward the sun
+            streakGeo.rotateX(-Math.PI / 2);
+            const streak = new THREE.Mesh(streakGeo, new THREE.MeshBasicMaterial({
+                map: streakTexture,
+                // depthTest stays ON: with it off, this transparent quad rendered over the whole
+                // frame and showed through land and buildings from south-facing angles — reading
+                // as a second, misplaced reflection. It sits 0.7 above the water so it never
+                // z-fights at the yacht camera's grazing angles, and land/buildings occlude it
+                // correctly. depthWrite stays off so other transparent effects layer cleanly.
+                transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending, opacity: 0.7
+            }));
+            // Midpoint sits between the coast and the sun, oriented exactly toward SUN_WORLD_POS.
+            streak.position.set(SUN_WORLD_POS.x * 0.32, 0.7, SUN_WORLD_POS.z * 0.32);
+            streak.rotation.y = -Math.atan2(SUN_WORLD_POS.x - streak.position.x, SUN_WORLD_POS.z - streak.position.z);
+            streak.renderOrder = -1;
+            scene.add(streak);
+
+            // --- SEA/SKY HORIZON HAZE (lightweight, same canvas-gradient technique as above) ---
+            // A soft band where the Gulf meets the sky, sitting at the same distance as the sun
+            // so the two read as one consistent horizon rather than the sun floating in isolation.
+            const horizonCanvas = document.createElement('canvas');
+            horizonCanvas.width = 8; horizonCanvas.height = 256;
+            const hctx = horizonCanvas.getContext('2d');
+            const hGrad = hctx.createLinearGradient(0, 0, 0, 256);
+            hGrad.addColorStop(0.0, 'rgba(191, 227, 252, 0)');
+            hGrad.addColorStop(0.46, 'rgba(214, 234, 250, 0.6)');
+            hGrad.addColorStop(0.54, 'rgba(150, 197, 224, 0.6)');
+            hGrad.addColorStop(1.0, 'rgba(20, 112, 180, 0)');
+            hctx.fillStyle = hGrad; hctx.fillRect(0, 0, 8, 256);
+            const horizonBand = new THREE.Mesh(
+                new THREE.PlaneGeometry(5200, 260),
+                new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(horizonCanvas), transparent: true, depthWrite: false, fog: false, side: THREE.DoubleSide })
+            );
+            horizonBand.position.set(0, 6, -2100); // same depth as the sun, straddling sea level
+            scene.add(horizonBand);
+        }
+
+        // Mohammed bin Rashid Boulevard loop (worldGroup coords; world x is mirrored). Waypoints
+        // were placed by hand in world coords to thread between Burj Lake, Dubai Mall, the Opera,
+        // Old Town and every boulevard tower podium, then x-negated into group space. The first
+        // two points repeat at the end so the CatmullRom ribbon closes without a visible seam.
+        // Shared between buildHighways (the drivable road) and buildBackgroundScenery (corridor
+        // exclusion, so no skyline block ever lands on the loop).
+        const BLVD_LOOP_PTS = [
+            [2, 161], [-20, 160], [-72, 163], [-84, 174], [-100, 206], [-102, 246], [-82, 278],
+            [-58, 296], [-10, 316], [28, 316], [44, 288], [47, 250], [52, 212], [70, 200],
+            [70, 178], [52, 161], [2, 161], [-20, 160]
+        ];
+
+        function buildHighways() {
+            // Lightweight road network referencing the real OSM/RTA layout.
+            // Coast runs along the x-axis: mainland at +z, Gulf at -z.
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x40434f, roughness: 0.65 });
+            const stripeMat = new THREE.MeshStandardMaterial({ color: 0x8d919f, roughness: 0.55 });
+            const pierMat = new THREE.MeshStandardMaterial({ color: 0xb9bcc4, roughness: 0.7 });
+
+            function addRoute(coords, width = 6, elev = 2.4, opts = {}) {
+                const shape = new THREE.Shape();
+                shape.moveTo(0, -width / 2); shape.lineTo(0, width / 2);
+                const points = coords.map(c => new THREE.Vector3(c[0], elev, c[1]));
+                const curve = new THREE.CatmullRomCurve3(points);
+                const geo = new THREE.ExtrudeGeometry(shape, { steps: 100, extrudePath: curve, bevelEnabled: false });
+                worldGroup.add(new THREE.Mesh(geo, roadMat));
+
+                // Centre stripe on major arteries for readability
+                if (opts.stripe) {
+                    const sShape = new THREE.Shape();
+                    sShape.moveTo(0, -0.5); sShape.lineTo(0, 0.5);
+                    const sPoints = coords.map(c => new THREE.Vector3(c[0], elev + 0.08, c[1]));
+                    const sGeo = new THREE.ExtrudeGeometry(sShape, { steps: 100, extrudePath: new THREE.CatmullRomCurve3(sPoints), bevelEnabled: false });
+                    worldGroup.add(new THREE.Mesh(sGeo, stripeMat));
+                }
+
+                // Support piers for elevated highways and sea bridges
+                if (opts.piers) {
+                    const pierCount = Math.max(3, Math.floor(curve.getLength() / 45));
+                    for (let i = 0; i <= pierCount; i++) {
+                        const p = curve.getPointAt(i / pierCount);
+                        const pier = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.9, elev, 8), pierMat);
+                        pier.position.set(p.x, elev / 2, p.z);
+                        worldGroup.add(pier);
+                    }
+                }
+            }
+
+            // E11 Sheikh Zayed Road: main artery running parallel to the coast past Trade Centre / Downtown
+            addRoute([[-1300, 200], [-700, 180], [-220, 165], [0, 155], [300, 145], [650, 118], [1000, 105], [1300, 100]], 14, 2.4, { stripe: true });
+            // Elevated E11 flyover section near the Trade Centre interchange (visibly raised, on piers)
+            addRoute([[-420, 172], [-220, 158], [-40, 148], [160, 138]], 10, 12, { piers: true, stripe: true });
+            // E44 Al Khail Road: second artery further inland
+            addRoute([[-1300, 400], [-600, 365], [0, 335], [600, 305], [1300, 280]], 12, 2.4, { stripe: true });
+            // E311 Sheikh Mohammed bin Zayed Road: outer ring, deepest inland
+            addRoute([[-1300, 600], [-500, 560], [300, 520], [1300, 470]], 12, 2.4, { stripe: true });
+            // Jumeirah Beach Road: hugs the coastline
+            addRoute([[-900, 60], [-400, 42], [0, 32], [300, 42], [520, 58], [800, 82], [1100, 95]], 6, 2.4);
+            // Financial Centre Road: connects E11 to Burj Khalifa / Downtown
+            addRoute([[-15, 90], [0, 155], [15, 220], [40, 290], [60, 340]], 8, 2.4);
+            // Al Wasl / connector between Beach Road and E11 near MOTF
+            addRoute([[-220, 40], [-220, 100], [-220, 165]], 6, 2.4);
+            // Interchange ramp: elevated curve joining the flyover to Financial Centre Road
+            addRoute([[130, 100], [90, 125], [40, 148]], 6, 9, { piers: true });
+
+            // --- JUNCTION FIXES: the ramp above ends at elev 9 without actually touching either
+            // the flyover deck (elev 12, ends at 160,138) or Financial Centre Road (elev 2.4, near
+            // 0,155) — a visible gap and height mismatch at both ends. These two short connector
+            // caps close them with a smooth height transition. Existing route coordinates and the
+            // addRoute() helper above are untouched; this is purely additive.
+            function addJunctionCap(points3D, width) {
+                const shape = new THREE.Shape();
+                shape.moveTo(0, -width / 2); shape.lineTo(0, width / 2);
+                const curve = new THREE.CatmullRomCurve3(points3D.map(p => new THREE.Vector3(p[0], p[1], p[2])));
+                const geo = new THREE.ExtrudeGeometry(shape, { steps: 20, extrudePath: curve, bevelEnabled: false });
+                worldGroup.add(new THREE.Mesh(geo, roadMat));
+            }
+            // Ramp end (130,9,100) -> flyover end (160,12,138)
+            addJunctionCap([[130, 9, 100], [145, 10.5, 118], [160, 12, 138]], 6);
+            // Ramp end (40,9,148) -> Financial Centre Road (0,2.4,155)
+            addJunctionCap([[40, 9, 148], [18, 5.5, 151], [0, 2.4, 155]], 6);
+
+            // --- BRIDGES OVER WATER ---
+            // Palm Jumeirah trunk road: from Beach Road out along the trunk
+            addRoute([[320, 45], [320, -10], [320, -100]], 5, 3.0);
+            // Bluewaters Island bridge to Ain Dubai (elevated over the sea, on piers)
+            addRoute([[505, 55], [512, 0], [520, -60]], 6, 6, { piers: true });
+            // Burj Al Arab private causeway bridge
+            addRoute([[140, 12], [140, -25], [140, -52]], 4, 4.5, { piers: true });
+
+            // --- CONNECTIVITY PASS (real RTA layout; every road now terminates on another road) ---
+            // Burj Al Arab causeway link: the causeway started at z=12, 25 units seaward of Beach
+            // Road (z~37 there) with nothing joining them. Short link ramps 2.4 -> 4.5 to match
+            // the causeway's deck height exactly.
+            addJunctionCap([[140, 2.4, 36], [140, 3.4, 24], [140, 4.5, 12]], 4);
+            // Umm Suqeim Street: beach -> E11 -> E44 connector near Burj Al Arab (passes at grade
+            // under the elevated flyover, junctioning E11 at (152,150) and ending on E44).
+            addRoute([[140, 36], [145, 90], [152, 150], [170, 240], [190, 326]], 6, 2.4);
+            // Al Sufouh / King Salman connector: Beach Road -> E11 near the Palm entrance.
+            addRoute([[400, 50], [420, 95], [440, 133]], 6, 2.4);
+            // Financial Centre Road north extension: the z=90 stub now reaches Beach Road.
+            addRoute([[-15, 90], [-12, 60], [-10, 32]], 8, 2.4);
+            // Financial Centre Road inland continuation (Al Meydan St): E44 -> E311.
+            addRoute([[60, 340], [80, 435], [100, 530]], 8, 2.4);
+            // E11 flyover west descent ramp: the deck previously ended at (-420, elev 12) hanging
+            // in mid-air; this ramp brings it down onto the at-grade E11 centreline.
+            addJunctionCap([[-420, 12, 172], [-460, 7, 174], [-500, 2.4, 174]], 10);
+            // Mohammed bin Rashid Boulevard: drivable curvy loop around Downtown (waypoints thread
+            // between the lake, mall, opera, Old Town and every tower podium; shared with the
+            // background-block road-corridor exclusion via BLVD_LOOP_PTS).
+            addRoute(BLVD_LOOP_PTS, 5, 2.45);
+        }
+
+        function buildHeroLandmarks() {
+            // --- SHARED LOW-POLY HELPERS ---
+            const UP_AXIS = new THREE.Vector3(0, 1, 0);
+            // Thin strut between two points (Ain Dubai A-frame legs, helipad brace)
+            function strutBetween(a, b, radius, mat) {
+                const dir = new THREE.Vector3().subVectors(b, a);
+                const len = dir.length();
+                const m = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, len, 6), mat);
+                m.position.copy(a).addScaledVector(dir, 0.5);
+                m.quaternion.setFromUnitVectors(UP_AXIS, dir.normalize());
+                return m;
+            }
+
+            // Procedural Arabic-calligraphy-style shell texture for the Museum of the Future
+            function makeCalligraphyTexture() {
+                const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+                const ctx = c.getContext('2d');
+                ctx.fillStyle = '#d9e4ef'; ctx.fillRect(0, 0, 512, 256);
+                ctx.strokeStyle = '#232830'; ctx.lineCap = 'round';
+                for (let i = 0; i < 46; i++) {
+                    const x = rng.range(0, 512), y = rng.range(20, 236);
+                    ctx.lineWidth = rng.range(4, 11);
+                    ctx.beginPath(); ctx.moveTo(x, y);
+                    ctx.bezierCurveTo(x + rng.range(-60, 60), y + rng.range(-34, 34), x + rng.range(-60, 60), y + rng.range(-34, 34), x + rng.range(-80, 80), y + rng.range(-24, 24));
+                    ctx.stroke();
+                    if (rng.next() > 0.55) {
+                        ctx.fillStyle = '#232830'; ctx.beginPath();
+                        ctx.arc(x + rng.range(-30, 30), y + rng.range(-30, 30), rng.range(2, 4.5), 0, Math.PI * 2); ctx.fill();
+                    }
+                }
+                const tex = new THREE.CanvasTexture(c);
+                tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(6, 2);
+                return tex;
+            }
+
+            LANDMARKS_CONFIG.forEach(cfg => {
+                const group = new THREE.Group();
+                group.position.set(cfg.pos[0], cfg.pos[1], cfg.pos[2]);
+
+                // Hit bounds linked to group object context configurations
+                const hit = new THREE.Mesh(new THREE.BoxGeometry(80, 220, 80), new THREE.MeshBasicMaterial({ visible: false }));
+                hit.userData = { id: cfg.id, groupRef: group };
+                group.add(hit);
+                interactiveMeshes.push(hit);
+
+                // Reusable materials (created per landmark so the golden hover tint stays isolated)
+                const silverMetallicMat = new THREE.MeshStandardMaterial({ color: 0xd6e4f0, metalness: 0.95, roughness: 0.08 });
+                const sandIslandMat = new THREE.MeshStandardMaterial({ color: 0xd6b178, roughness: 0.85 });
+                const whiteStructMat = new THREE.MeshStandardMaterial({ color: 0xf4f6f8, metalness: 0.2, roughness: 0.4 });
+                const grassMat = new THREE.MeshStandardMaterial({ color: 0x4a6344, roughness: 0.9 });
+
+                if (cfg.id === "burjk") {
+                    // Y-shaped Hymenocallis footprint: three wings of telescoping setbacks
+                    // around a tall central core, crowned tiers and a needle spire.
+                    const stepHeights = [148, 121, 95, 71, 49, 29];
+                    const stepWidths  = [7.6, 7.0, 6.4, 5.8, 5.2, 4.6];
+                    const stepGeos = stepHeights.map((h, s) => {
+                        const g = new THREE.BoxGeometry(stepWidths[s], h, 6.4);
+                        g.translate(0, h / 2, 4.2 + s * 6.0); // pivot at the core, steps march outward
+                        return g;
+                    });
+                    for (let j = 0; j < 3; j++) {
+                        const wingPivot = new THREE.Group();
+                        wingPivot.rotation.y = (j * Math.PI * 2) / 3;
+                        stepGeos.forEach(g => wingPivot.add(new THREE.Mesh(g, silverMetallicMat)));
+                        group.add(wingPivot);
+                    }
+                    const core = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 5.0, 162, 6), silverMetallicMat);
+                    core.position.y = 81; group.add(core);
+                    const crownA = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 3.1, 18, 6), silverMetallicMat);
+                    crownA.position.y = 171; group.add(crownA);
+                    const crownB = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 2.0, 14, 6), silverMetallicMat);
+                    crownB.position.y = 186; group.add(crownB);
+                    const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.55, 36, 6), silverMetallicMat);
+                    spire.position.y = 210; group.add(spire); // tip ~228: clearly the tallest structure on the map
+                }
+                else if (cfg.id === "moft") {
+                    const motf = new THREE.Group();
+                    // Signature green hill podium (flattened dome, "the earth")
+                    const hill = new THREE.Mesh(new THREE.SphereGeometry(26, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2), grassMat);
+                    hill.scale.set(1.25, 0.29, 0.9);
+                    motf.add(hill);
+                    // Elliptical steel torus wrapped in dark calligraphy, open central void
+                    const calligraphyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.85, roughness: 0.18, map: makeCalligraphyTexture() });
+                    const torus = new THREE.Mesh(new THREE.TorusGeometry(13.5, 6.6, 18, 56), calligraphyMat);
+                    torus.scale.set(1, 1.18, 1); // taller-than-wide ellipse like the real shell
+                    torus.position.y = 7 + (13.5 + 6.6) * 1.18 - 2.2; // ring rests on the hill crest
+                    motf.add(torus);
+                    motf.rotation.y = Math.PI / 5; // broadside to Sheikh Zayed Road, as built
+                    group.add(motf);
+                }
+                else if (cfg.id === "burja") {
+                    const island = new THREE.Mesh(new THREE.CylinderGeometry(20, 24, 4, 8), sandIslandMat);
+                    island.position.y = 2; group.add(island);
+
+                    // Dhow-sail profile: vertical rear spine + curved leading edge, extruded slab
+                    const sailShape = new THREE.Shape();
+                    sailShape.moveTo(0, 0);
+                    sailShape.lineTo(0, 52);
+                    sailShape.quadraticCurveTo(-17.5, 30, -14, 0);
+                    sailShape.lineTo(0, 0);
+                    const sailGeo = new THREE.ExtrudeGeometry(sailShape, { depth: 7, bevelEnabled: false });
+                    sailGeo.translate(0, 0, -3.5); // centre the slab thickness
+                    const sail = new THREE.Mesh(sailGeo, whiteStructMat);
+                    sail.rotation.y = -Math.PI / 2; // curved edge billows toward the open Gulf (-z)
+                    sail.position.y = 4;            // sits on the island deck
+                    group.add(sail);
+
+                    // Cantilevered circular helipad jutting from the flank near the top
+                    const helipad = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.2, 0.9, 18), whiteStructMat);
+                    helipad.position.set(8.2, 48, -3);
+                    group.add(helipad);
+                    group.add(strutBetween(new THREE.Vector3(3.2, 42, -3), new THREE.Vector3(8.2, 47.4, -3), 0.55, silverMetallicMat));
+
+                    // Rooftop mast at the apex
+                    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.5, 12, 6), silverMetallicMat);
+                    mast.position.set(0, 61, -1);
+                    group.add(mast);
+                }
+                else if (cfg.id === "palm") {
+                    // Fully offshore archipelago. Group sits at the shoreline (world z ~ -10):
+                    // trunk starts at the coast (local +z) and extends into the Gulf (local -z),
+                    // fronds radiate seaward, and the crescent bulges into open water with its
+                    // opening facing back toward the mainland (+z).
+                    const arch = new THREE.Group();
+                    const trunk = new THREE.Mesh(new THREE.BoxGeometry(16, 2.5, 130), sandIslandMat);
+                    trunk.position.set(0, 1.25, -30); arch.add(trunk);
+
+                    // 17 tapered fronds fanning the seaward semicircle, longest at the centre
+                    const frondGeo = new THREE.BoxGeometry(3.0, 1.6, 58);
+                    frondGeo.translate(0, 0, -30); // pivot at the frond root
+                    for (let f = -8; f <= 8; f++) {
+                        const frond = new THREE.Mesh(frondGeo, sandIslandMat);
+                        frond.position.set(0, 0.9, -40);
+                        frond.rotation.y = f * 0.185;
+                        frond.scale.z = 1 - Math.abs(f) * 0.05;
+                        arch.add(frond);
+                    }
+
+                    const crescent = new THREE.Mesh(new THREE.TorusGeometry(85, 5, 5, 40, Math.PI), sandIslandMat);
+                    crescent.rotation.x = -Math.PI / 2; // lays flat, bulging seaward, opening toward the coast
+                    crescent.position.set(0, 0.6, -45); arch.add(crescent);
+
+                    // Atlantis The Palm at the crescent apex: twin rose towers + skybridge over a central arch
+                    const atlantisMat = new THREE.MeshStandardMaterial({ color: 0xd8a48c, roughness: 0.6 });
+                    [-4.5, 4.5].forEach(x => {
+                        const towerMesh = new THREE.Mesh(new THREE.BoxGeometry(5, 17, 4.5), atlantisMat);
+                        towerMesh.position.set(x, 9.1, -128); arch.add(towerMesh);
+                    });
+                    const skybridge = new THREE.Mesh(new THREE.BoxGeometry(14, 3.2, 4.5), atlantisMat);
+                    skybridge.position.set(0, 14.5, -128); arch.add(skybridge);
+
+                    // Shoreline apartment rows flanking the trunk road
+                    for (let b = 0; b < 7; b++) {
+                        const aptH = rng.range(4, 8);
+                        const apt = new THREE.Mesh(new THREE.BoxGeometry(3.4, aptH, 7.5), silverMetallicMat);
+                        apt.position.set(b % 2 === 0 ? -6.2 : 6.2, 2.5 + aptH / 2, -78 + b * 14);
+                        arch.add(apt);
+                    }
+                    group.add(arch);
+                }
+                else if (cfg.id === "ain") {
+                    // Island platform now built in buildDistrictSurroundings() as a rounded
+                    // Bluewaters shape (top kept at y=6 so the A-frame legs still land on it).
+
+                    const wheel = new THREE.Group();
+                    const HUB_Y = 35;
+                    const rim = new THREE.Mesh(new THREE.TorusGeometry(27, 1.1, 8, 48), silverMetallicMat);
+                    rim.position.y = HUB_Y; wheel.add(rim);
+                    const hub = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 4.2, 10), whiteStructMat);
+                    hub.rotation.x = Math.PI / 2; hub.position.y = HUB_Y; wheel.add(hub);
+
+                    // Cable spokes + passenger capsules studding the rim
+                    const spokeGeo = new THREE.CylinderGeometry(0.14, 0.14, 27, 4);
+                    spokeGeo.translate(0, 13.5, 0); // pivot at the hub
+                    const capsuleGeo = new THREE.SphereGeometry(0.95, 8, 6);
+                    for (let i = 0; i < 24; i++) {
+                        const angle = (i / 24) * Math.PI * 2;
+                        const spoke = new THREE.Mesh(spokeGeo, silverMetallicMat);
+                        spoke.position.y = HUB_Y; spoke.rotation.z = angle; wheel.add(spoke);
+                        const capsule = new THREE.Mesh(capsuleGeo, whiteStructMat);
+                        capsule.position.set(-Math.sin(angle) * 28.4, HUB_Y + Math.cos(angle) * 28.4, 0);
+                        wheel.add(capsule);
+                    }
+
+                    // Signature white A-frame support legs, two per side of the wheel plane
+                    [-3.4, 3.4].forEach(zOff => {
+                        [-1, 1].forEach(side => {
+                            wheel.add(strutBetween(
+                                new THREE.Vector3(side * 9.5, 3, zOff),
+                                new THREE.Vector3(side * 1.4, HUB_Y - 0.8, zOff * 0.4),
+                                1.0, whiteStructMat));
+                        });
+                    });
+
+                    wheel.position.y = 3; group.add(wheel);
+                }
+                scene.add(group);
+                cfg.runtimeGroup = group;
+            });
+        }
+
+        function buildBackgroundScenery() {
+            const maxBlocks = 550; const geom = new THREE.BoxGeometry(1, 1, 1); geom.translate(0, 0.5, 0);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x5b6b80, roughness: 0.2, metalness: 0.75 });
+            const instanceMesh = new THREE.InstancedMesh(geom, mat, maxBlocks); backgroundMeshInstance = instanceMesh;
+            const helper = new THREE.Object3D();
+
+            // Road/bridge corridors (worldGroup coords, matching the addRoute polylines above).
+            // Any block whose footprint would touch a carriageway — or poke up through the
+            // elevated flyover/ramp decks — is rejected. The rejection happens AFTER all of the
+            // block's rng draws, so the shared rng sequence is untouched and every surviving
+            // block keeps exactly the same position and size as before.
+            const ROAD_CORRIDORS = [
+                { pts: [[-1300, 200], [-700, 180], [-220, 165], [0, 155], [300, 145], [650, 118], [1000, 105], [1300, 100]], hw: 8 }, // E11
+                { pts: [[-500, 174], [-420, 172], [-220, 158], [-40, 148], [160, 138]], hw: 6 },                                      // E11 flyover + west ramp
+                { pts: [[-1300, 400], [-600, 365], [0, 335], [600, 305], [1300, 280]], hw: 7 },                                       // E44
+                { pts: [[-1300, 600], [-500, 560], [300, 520], [1300, 470]], hw: 7 },                                                 // E311
+                { pts: [[300, 42], [520, 58], [800, 82], [1100, 95]], hw: 4 },                                                        // Beach Rd (eastern part reaches z>=70)
+                { pts: [[-15, 90], [0, 155], [15, 220], [40, 290], [60, 340]], hw: 5 },                                               // Financial Centre Rd
+                { pts: [[60, 340], [80, 435], [100, 530]], hw: 5 },                                                                   // FCR inland continuation
+                { pts: [[130, 100], [90, 125], [40, 148], [0, 155]], hw: 4 },                                                         // interchange ramp + cap
+                { pts: [[130, 100], [160, 138]], hw: 4 },                                                                             // ramp -> flyover cap
+                { pts: [[140, 36], [145, 90], [152, 150], [170, 240], [190, 326]], hw: 4 },                                           // Umm Suqeim St
+                { pts: [[400, 50], [420, 95], [440, 133]], hw: 4 },                                                                   // Al Sufouh connector
+                { pts: [[-220, 40], [-220, 100], [-220, 165]], hw: 4 },                                                               // Al Wasl connector
+                { pts: BLVD_LOOP_PTS, hw: 3.5 }                                                                                       // Downtown Boulevard loop
+            ];
+            function distPointToSeg(px, pz, ax, az, bx, bz) {
+                const dx = bx - ax, dz = bz - az;
+                const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)));
+                return Math.hypot(px - (ax + t * dx), pz - (az + t * dz));
+            }
+
+            for (let i = 0; i < maxBlocks; i++) {
+                let x = rng.range(-700, 700); let z = rng.range(70, 850); // mainland side only
+                if (Math.abs(x) < 95 && Math.abs(z - 220) < 95) { x += 160; }        // keep Downtown clear around Burj Khalifa
+                if (Math.abs(x + 220) < 60 && Math.abs(z - 160) < 60) { z += 110; }  // keep the MOTF plot clear
+                const sx = rng.range(7, 15), sy = rng.range(20, 110), sz = rng.range(7, 15);
+                let onRoad = false;
+                for (const c of ROAD_CORRIDORS) {
+                    for (let s = 0; s < c.pts.length - 1; s++) {
+                        if (distPointToSeg(x, z, c.pts[s][0], c.pts[s][1], c.pts[s + 1][0], c.pts[s + 1][1]) < c.hw + Math.max(sx, sz) / 2 + 1) { onRoad = true; break; }
+                    }
+                    if (onRoad) break;
+                }
+                if (onRoad) {
+                    helper.position.set(x, -200, z); helper.scale.set(0.001, 0.001, 0.001); // parked out of sight below the map
+                } else {
+                    helper.position.set(x, 2, z); helper.scale.set(sx, sy, sz);
+                }
+                helper.updateMatrix(); instanceMesh.setMatrixAt(i, helper.matrix);
+            }
+            worldGroup.add(instanceMesh);
+        }
+
+        // --- DISTRICT SURROUNDINGS: DOWNTOWN + BLUEWATERS (world-space, added after
+        // buildBackgroundScenery so the shared rng sequence for the skyline is untouched) ---
+        function buildDistrictSurroundings() {
+            const districts = new THREE.Group();
+            scene.add(districts);
+
+            // Reusable low-poly materials
+            const lakeMat       = new THREE.MeshStandardMaterial({ color: 0x1e88c9, roughness: 0.15, metalness: 0.4 });
+            const beigeMat      = new THREE.MeshStandardMaterial({ color: 0xcfc4ac, roughness: 0.8 });
+            const oldTownMat    = new THREE.MeshStandardMaterial({ color: 0xc9a877, roughness: 0.85 });
+            const glassTowerMat = new THREE.MeshStandardMaterial({ color: 0x7c8ba0, roughness: 0.25, metalness: 0.7 });
+            const podiumMat     = new THREE.MeshStandardMaterial({ color: 0xb9b2a2, roughness: 0.8 });
+            const plazaMat      = new THREE.MeshStandardMaterial({ color: 0xdedbd2, roughness: 0.9 });
+            const whiteResMat   = new THREE.MeshStandardMaterial({ color: 0xe9e5dc, roughness: 0.7 });
+            const islandSandMat = new THREE.MeshStandardMaterial({ color: 0xd6b178, roughness: 0.85 });
+            const greenMat      = new THREE.MeshStandardMaterial({ color: 0x4a6344, roughness: 0.9 });
+            const trunkMat      = new THREE.MeshStandardMaterial({ color: 0x6e5637, roughness: 0.9 });
+            const jetMat        = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+            const asphaltMat    = new THREE.MeshStandardMaterial({ color: 0x54575f, roughness: 0.7 });
+
+            const treeTrunkGeo  = new THREE.CylinderGeometry(0.35, 0.45, 2.4, 5);
+            const treeCanopyGeo = new THREE.ConeGeometry(1.8, 3.4, 6);
+            function addTree(x, z, baseY) {
+                const t = new THREE.Mesh(treeTrunkGeo, trunkMat);  t.position.set(x, baseY + 1.2, z); districts.add(t);
+                const c = new THREE.Mesh(treeCanopyGeo, greenMat); c.position.set(x, baseY + 4.1, z); districts.add(c);
+            }
+
+            // ============ DOWNTOWN DUBAI (around Burj Khalifa @ 0,2,220) ============
+            // Mohammed bin Rashid Boulevard loop: flat paving ring below road level (not a drivable road)
+            const blvd = new THREE.Mesh(new THREE.RingGeometry(58, 64, 48), asphaltMat);
+            blvd.rotation.x = -Math.PI / 2; blvd.position.set(0, 2.16, 220); districts.add(blvd);
+
+            // Burj Lake: turquoise blob hugging the tower's eastern base (plan coords use x, -z)
+            const lakeShape = new THREE.Shape();
+            lakeShape.moveTo(8, -188);
+            lakeShape.quadraticCurveTo(38, -180, 50, -202);
+            lakeShape.quadraticCurveTo(62, -224, 44, -244);
+            lakeShape.quadraticCurveTo(24, -254, 12, -240);
+            lakeShape.quadraticCurveTo(0, -224, 8, -206);
+            lakeShape.quadraticCurveTo(0, -196, 8, -188);
+            const lake = new THREE.Mesh(new THREE.ShapeGeometry(lakeShape, 12), lakeMat);
+            lake.rotation.x = -Math.PI / 2; lake.position.y = 2.24; districts.add(lake);
+
+            // Dubai Fountain: arc of white jets, tallest in the middle
+            for (let i = 0; i < 9; i++) {
+                const t = i / 8;
+                const h = 3 + 5 * Math.sin(t * Math.PI) + (i === 4 ? 2.5 : 0);
+                const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, h, 5), jetMat);
+                jet.position.set(22 + t * 22, 2.2 + h / 2, 208 + Math.sin(t * Math.PI) * 8);
+                districts.add(jet);
+            }
+
+            // Dubai Mall: sprawling low massing on the lake's east bank + rooftop volumes
+            const mallBase = new THREE.Mesh(new THREE.BoxGeometry(40, 7, 58), beigeMat);
+            mallBase.position.set(70, 5.5, 229); districts.add(mallBase);
+            const mallWing = new THREE.Mesh(new THREE.BoxGeometry(22, 6, 20), beigeMat);
+            mallWing.position.set(56, 5, 194); districts.add(mallWing);
+            [[62, 214, 14, 4, 16], [80, 240, 12, 3.5, 14], [70, 252, 10, 3, 10]].forEach(([x, z, w, h, d]) => {
+                const roofVol = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), beigeMat);
+                roofVol.position.set(x, 9 + h / 2, z); districts.add(roofVol);
+            });
+
+            // Souk Al Bahar / Old Town: tight sand-coloured low-rise courtyard cluster south of the lake
+            [
+                [12, 258, 7, 4], [20, 254, 6, 5], [28, 258, 8, 4], [37, 255, 6, 6], [45, 260, 7, 4],
+                [15, 266, 6, 5], [24, 268, 7, 4], [33, 266, 6, 5], [42, 270, 8, 4],
+                [20, 276, 6, 4], [30, 277, 7, 5], [40, 278, 6, 4]
+            ].forEach(([x, z, w, h]) => {
+                const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, w * 0.9), oldTownMat);
+                b.position.set(x, 2 + h / 2, z); districts.add(b);
+            });
+
+            // Dubai Opera: dhow-hull glass lens on the lake's west shore
+            const operaShape = new THREE.Shape();
+            operaShape.moveTo(-11, 0);
+            operaShape.quadraticCurveTo(0, 5, 11, 0);
+            operaShape.quadraticCurveTo(0, -5, -11, 0);
+            const operaGeo = new THREE.ExtrudeGeometry(operaShape, { depth: 5, bevelEnabled: false });
+            operaGeo.rotateZ(0.5); operaGeo.rotateX(-Math.PI / 2);
+            const opera = new THREE.Mesh(operaGeo, glassTowerMat);
+            opera.position.set(-34, 2.1, 200); districts.add(opera);
+            const operaRoofGeo = new THREE.ExtrudeGeometry(operaShape, { depth: 1, bevelEnabled: false });
+            operaRoofGeo.scale(0.9, 0.9, 1); operaRoofGeo.rotateZ(0.5); operaRoofGeo.rotateX(-Math.PI / 2);
+            const operaRoof = new THREE.Mesh(operaRoofGeo, plazaMat);
+            operaRoof.position.set(-34, 7.1, 200); districts.add(operaRoof);
+
+            // Varied boulevard towers on podiums ringing the district
+            [
+                [-52, 190, 12, 58], [-66, 235, 11, 46], [-40, 172, 10, 40],
+                [26, 176, 12, 74],  [58, 178, 13, 62],  [66, 264, 12, 48],
+                [34, 288, 11, 44],  [-8, 294, 12, 78],  [-58, 264, 10, 38], [-4, 272, 10, 36]
+            ].forEach(([x, z, w, h]) => {
+                const pod = new THREE.Mesh(new THREE.BoxGeometry(w * 1.7, 4, w * 1.7), podiumMat);
+                pod.position.set(x, 4, z); districts.add(pod);
+                const twr = new THREE.Mesh(new THREE.BoxGeometry(w, h, w * 0.8), glassTowerMat);
+                twr.position.set(x, 6 + h / 2, z); districts.add(twr);
+            });
+
+            // Lakeside landscaping: tree ring + lawns
+            for (let i = 0; i < 12; i++) {
+                const a = (i / 12) * Math.PI * 2;
+                const tx = Math.sin(a) * 50, tz = 220 - Math.cos(a) * 50;
+                if (tx > 16 && tz > 184 && tz < 250) continue; // skip the lake itself
+                addTree(tx, tz, 2.1);
+            }
+            const lawn1 = new THREE.Mesh(new THREE.BoxGeometry(26, 0.3, 8), greenMat);
+            lawn1.position.set(-48, 2.2, 238); districts.add(lawn1);
+            const lawn2 = new THREE.Mesh(new THREE.BoxGeometry(30, 0.3, 8), greenMat);
+            lawn2.position.set(28, 2.2, 250); districts.add(lawn2);
+
+            // ============ BLUEWATERS ISLAND (around Ain Dubai @ -520,0,-85) ============
+            // Rounded island platform (replaces the old plain box; top stays at y=6 for the wheel legs)
+            const isShape = new THREE.Shape(); // plan coords (x, -z)
+            isShape.moveTo(-520, 56);
+            isShape.quadraticCurveTo(-496, 58, -484, 72);
+            isShape.quadraticCurveTo(-474, 86, -480, 102);
+            isShape.quadraticCurveTo(-486, 116, -504, 119);
+            isShape.quadraticCurveTo(-528, 122, -546, 114);
+            isShape.quadraticCurveTo(-562, 105, -560, 88);
+            isShape.quadraticCurveTo(-558, 72, -542, 62);
+            isShape.quadraticCurveTo(-532, 56, -520, 56);
+            const islandGeo = new THREE.ExtrudeGeometry(isShape, { depth: 6, bevelEnabled: false });
+            islandGeo.rotateX(-Math.PI / 2);
+            districts.add(new THREE.Mesh(islandGeo, islandSandMat));
+
+            // Plaza around the wheel base + waterfront promenade strips along the rim
+            const plaza = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 0.3, 20), plazaMat);
+            plaza.position.set(-520, 6.15, -85); districts.add(plaza);
+            [
+                [-520, -116, 28, 3, 0], [-498, -110, 16, 3, 0.5], [-542, -110, 16, 3, -0.5],
+                [-555, -94, 3, 14, 0],  [-483, -90, 3, 14, 0]
+            ].forEach(([x, z, w, d, ry]) => {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(w, 0.25, d), plazaMat);
+                p.position.set(x, 6.12, z); p.rotation.y = ry; districts.add(p);
+            });
+
+            // Low-rise residential rows + retail podiums by the plaza (photo: white mid-rises ringing the wheel)
+            [
+                [-500, -72, 10, 8, 9, whiteResMat], [-511, -68, 9, 7, 10, whiteResMat],
+                [-532, -70, 10, 8, 9, whiteResMat], [-545, -79, 9, 8, 10, whiteResMat],
+                [-551, -92, 9, 9, 9, whiteResMat],  [-545, -105, 10, 8, 8, whiteResMat],
+                [-533, -110, 9, 7, 8, whiteResMat], [-503, -112, 9, 7, 8, whiteResMat],
+                [-508, -78, 6, 8, 3.5, plazaMat],   [-532, -92, 6, 8, 3.5, plazaMat]
+            ].forEach(([x, z, w, d, h, mat]) => {
+                const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+                b.position.set(x, 6 + h / 2, z); districts.add(b);
+            });
+
+            // Resort / hotel massing at the eastern tip
+            [[-489, -93, 11, 12, 13], [-495, -103, 9, 9, 11]].forEach(([x, z, w, d, h]) => {
+                const r = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), beigeMat);
+                r.position.set(x, 6 + h / 2, z); districts.add(r);
+            });
+
+            // Marina on the sheltered eastern side: pier + moored boats near the bridge landing
+            const pier = new THREE.Mesh(new THREE.BoxGeometry(12, 0.5, 2.5), plazaMat);
+            pier.position.set(-473, 2.4, -80); districts.add(pier);
+            const boatGeo = new THREE.BoxGeometry(2.6, 1, 1.2);
+            [[-468, -76], [-466, -81], [-469, -86], [-464, -73]].forEach(([x, z]) => {
+                const b = new THREE.Mesh(boatGeo, whiteResMat);
+                b.position.set(x, 0.6, z); b.rotation.y = 0.3; districts.add(b);
+            });
+
+            // Palm planting on the plaza
+            addTree(-509, -93, 6); addTree(-531, -77, 6); addTree(-520, -99, 6); addTree(-506, -85, 6);
+        }
+
+        // --- INTERACTION HOVER HIGHLIGHTING & POINTER REGISTER PIPELINES ---
+        function setupInteractionPipelines() {
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
+            window.addEventListener('click', (e) => {
+                if (currentMode !== "explore" || e.target.closest('.interactive') || tourActive) return;
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const hits = raycaster.intersectObjects(interactiveMeshes);
+                if (hits.length > 0) jumpToDestination(hits[0].object.userData.id);
+            });
+
+            // Hover tracking rule integration changing hierarchy color allocations cleanly
+            window.addEventListener('pointermove', (e) => {
+                if (e.target.closest('.interactive') || currentMode !== "explore" || tourActive) {
+                    document.body.style.cursor = 'default';
+                    clearActiveHighlight();
+                    return;
+                }
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const hits = raycaster.intersectObjects(interactiveMeshes);
+
+                if (hits.length > 0) {
+                    document.body.style.cursor = 'pointer';
+                    const targetGroup = hits[0].object.userData.groupRef;
+                    if (hoveredMesh !== targetGroup) {
+                        clearActiveHighlight();
+                        hoveredMesh = targetGroup;
+                        hoverSavedMaterialColors = new Map();
+                        hoveredMesh.traverse(node => {
+                            if (node.isMesh && node.material && !hoverSavedMaterialColors.has(node.material)) {
+                                hoverSavedMaterialColors.set(node.material, node.material.color.getHex());
+                                node.material.color.setHex(0xffdf6d); // Subtle dynamic golden hover color shift
+                            }
+                        });
+                    }
+                } else {
+                    document.body.style.cursor = 'default';
+                    clearActiveHighlight();
+                }
+            });
+        }
+
+        function clearActiveHighlight() {
+            if (hoveredMesh) {
+                if (hoverSavedMaterialColors) {
+                    hoverSavedMaterialColors.forEach((hex, mat) => mat.color.setHex(hex));
+                    hoverSavedMaterialColors = null;
+                }
+                hoveredMesh = null;
+            }
+        }
+
+        // --- SHORTENED DESCRIPTION LOGIC CARD MATRIX ---
+        function formatShortenedTextDescription(cfg) {
+            fullDescriptionExpanded = false;
+            document.getElementById('info-card').classList.remove('expanded'); // mobile: always start title-only
+            const container = document.getElementById('card-desc-container');
+            container.innerHTML = '';
+
+            const textParagraph = document.createElement('p');
+            textParagraph.id = "card-desc";
+
+            const periods = cfg.desc.split('. ');
+            const summarySnippet = periods.slice(0, 2).join('. ') + '.';
+            textParagraph.innerText = summarySnippet;
+
+            const readMoreSpan = document.createElement('span');
+            readMoreSpan.className = 'read-more-toggle';
+            readMoreSpan.innerText = 'Read more';
+            
+            readMoreSpan.addEventListener('click', () => {
+                if (!fullDescriptionExpanded) {
+                    textParagraph.innerText = cfg.desc + ' ';
+                    readMoreSpan.innerText = 'Read less';
+                    textParagraph.appendChild(readMoreSpan);
+                    fullDescriptionExpanded = true;
+                } else {
+                    textParagraph.innerText = summarySnippet;
+                    readMoreSpan.innerText = 'Read more';
+                    textParagraph.appendChild(readMoreSpan);
+                    fullDescriptionExpanded = false;
+                }
+            });
+
+            textParagraph.appendChild(readMoreSpan);
+            container.appendChild(textParagraph);
+        }
+
+        function updateDescriptionPanelPlacement(match) {
+            const card = document.getElementById('info-card');
+            card.style.display = 'flex';
+            if (window.innerWidth <= 768 || tourActive) return; 
+            const worldPos = new THREE.Vector3(match.pos[0], match.pos[1], match.pos[2]);
+            worldPos.project(camera);
+            card.classList.remove('pos-left', 'pos-right');
+            if (((worldPos.x + 1) * window.innerWidth / 2) > window.innerWidth / 2) {
+                card.classList.add('pos-left'); 
+            } else {
+                card.classList.add('pos-right'); 
+            }
+        }
+
+        function jumpToDestination(id) {
+            const match = LANDMARKS_CONFIG.find(c => c.id === id);
+            if (!match) return;
+            activeId = id; isInterpolating = true;
+            targetCamPos.set(match.pos[0] + match.cam[0], match.pos[1] + match.cam[1], match.pos[2] + match.cam[2]);
+            targetLookAt.set(match.pos[0], match.pos[1] + (match.id === "palm" ? 0 : 25), match.pos[2] + (match.id === "palm" ? -50 : 0)); 
+            
+            document.querySelectorAll('.menu-item').forEach(item => item.classList.toggle('active', item.dataset.id === id));
+            document.getElementById('card-title').innerText = match.name;
+            formatShortenedTextDescription(match);
+            updateDescriptionPanelPlacement(match);
+        }
+
+        function setupTourPath() {
+            const waypoints = []; splineLookTargets = [];
+            LANDMARKS_CONFIG.forEach((cfg, index) => {
+                waypoints.push(new THREE.Vector3(cfg.pos[0] + cfg.cam[0] - (index === 0 ? 30 : 50), cfg.pos[1] + cfg.cam[1] + 10, cfg.pos[2] + cfg.cam[2] - 30));
+                waypoints.push(new THREE.Vector3(cfg.pos[0] + cfg.cam[0], cfg.pos[1] + cfg.cam[1], cfg.pos[2] + cfg.cam[2]));          
+                waypoints.push(new THREE.Vector3(cfg.pos[0] + cfg.cam[0] + 50, cfg.pos[1] + cfg.cam[1] + 10, cfg.pos[2] + cfg.cam[2] + 40)); 
+                for(let i=0; i<3; i++) splineLookTargets.push(new THREE.Vector3(cfg.pos[0], cfg.pos[1] + (cfg.id === "burjk" ? 75 : 15), cfg.pos[2] + (cfg.id === "palm" ? -50 : 0)));
+            });
+            tourSpline = new THREE.CatmullRomCurve3(waypoints, true); 
+        }
+
+        function setupYachtPath() {
+            YACHT_ROUTE_CFGS = YACHT_ROUTE.map(id => LANDMARKS_CONFIG.find(c => c.id === id));
+
+            const waypoints = YACHT_WAYPOINTS.map(p => new THREE.Vector3(p.x, p.y, p.z));
+            yachtLookIds = YACHT_WAYPOINTS.map(p => p.look);
+            yachtLookTargets = YACHT_WAYPOINTS.map(p => {
+                const cfg = LANDMARKS_CONFIG.find(c => c.id === p.look);
+                return new THREE.Vector3(cfg.pos[0], cfg.pos[1] + (cfg.id === "burjk" ? 75 : 15), cfg.pos[2]);
+            });
+            // Non-closed, centripetal spline (three.js's default curveType — named explicitly here
+            // per requirement) so the route follows the coast once, start to end, with no closed-loop
+            // shortcut cutting diagonally back across the map.
+            yachtSpline = new THREE.CatmullRomCurve3(waypoints, false, 'centripetal');
+        }
+
+        function buildHeliNodes() {
+            // ARCHITECTURE NOTE: every LFO here modulates an INNER gain stage, and start/stop/mute
+            // only ever ramp the outer MASTER gains. Web Audio param connections SUM (they don't
+            // multiply), so the previous design — LFOs wired straight onto the master gains —
+            // left a residual ±depth oscillation audible even after ramping the master to 0.
+            // Chaining inner(LFO) -> master(ramp) multiplies the two stages, so master = 0 is
+            // genuinely silent in Explore mode / on mute / when switching tours.
+
+            // Low engine rumble (sub-bass; desktop-focused).
+            const osc = audioCtx.createOscillator(); const lowpass = audioCtx.createBiquadFilter(); const gainNode = audioCtx.createGain();
+            osc.type = "sawtooth"; osc.frequency.setValueAtTime(15, audioCtx.currentTime);
+            lowpass.type = "lowpass"; lowpass.frequency.setValueAtTime(110, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            osc.connect(lowpass); lowpass.connect(gainNode); gainNode.connect(audioCtx.destination); osc.start();
+
+            // Shared blade-pass LFO: a 12Hz square wave gates the layers below on/off, which is
+            // the recognisable "whup-whup-whup" rotor rhythm.
+            const chopLFO = audioCtx.createOscillator();
+            chopLFO.type = "square"; chopLFO.frequency.setValueAtTime(12, audioCtx.currentTime);
+            chopLFO.start();
+
+            // Rotor tone (audible on phone speakers, which roll off below ~150Hz).
+            const rotorOsc = audioCtx.createOscillator();
+            rotorOsc.type = "square"; rotorOsc.frequency.setValueAtTime(85, audioCtx.currentTime);
+            const rotorTrem = audioCtx.createGain(); rotorTrem.gain.setValueAtTime(0.6, audioCtx.currentTime);
+            const rotorTremDepth = audioCtx.createGain(); rotorTremDepth.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            chopLFO.connect(rotorTremDepth); rotorTremDepth.connect(rotorTrem.gain);
+            const rotorGain = audioCtx.createGain(); rotorGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            rotorOsc.connect(rotorTrem); rotorTrem.connect(rotorGain); rotorGain.connect(audioCtx.destination); rotorOsc.start();
+
+            // Blade slap: broadband noise gated hard by the same LFO — the percussive "chop".
+            const slapBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+            const slapData = slapBuffer.getChannelData(0);
+            for (let i = 0; i < slapData.length; i++) slapData[i] = Math.random() * 2 - 1;
+            const slapSource = audioCtx.createBufferSource();
+            slapSource.buffer = slapBuffer; slapSource.loop = true;
+            const slapFilter = audioCtx.createBiquadFilter();
+            slapFilter.type = "bandpass"; slapFilter.frequency.setValueAtTime(320, audioCtx.currentTime); slapFilter.Q.setValueAtTime(1.0, audioCtx.currentTime);
+            const slapInner = audioCtx.createGain(); slapInner.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            const slapDepth = audioCtx.createGain(); slapDepth.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            chopLFO.connect(slapDepth); slapDepth.connect(slapInner.gain);
+            const chopGain = audioCtx.createGain(); chopGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            slapSource.connect(slapFilter); slapFilter.connect(slapInner); slapInner.connect(chopGain); chopGain.connect(audioCtx.destination); slapSource.start();
+
+            // Subtle wind: thin highpass hiss, clearly distinct from the yacht's soft low wash.
+            const windBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+            const windData = windBuffer.getChannelData(0);
+            for (let i = 0; i < windData.length; i++) windData[i] = Math.random() * 2 - 1;
+            const windSource = audioCtx.createBufferSource();
+            windSource.buffer = windBuffer; windSource.loop = true;
+            const windFilter = audioCtx.createBiquadFilter();
+            windFilter.type = "highpass"; windFilter.frequency.setValueAtTime(1400, audioCtx.currentTime);
+            const windGain = audioCtx.createGain();
+            windGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            windSource.connect(windFilter); windFilter.connect(windGain); windGain.connect(audioCtx.destination); windSource.start();
+
+            return { gainNode, rotorGain, chopGain, windGain };
+        }
+
+        function buildYachtNodes() {
+            // Sea-waves sailing ambience (ASMR-calm): lowpassed noise with a deep, slow amplitude
+            // swell — nothing tonal, so it can never be mistaken for the helicopter. Same
+            // inner(LFO) -> master(ramp) multiplicative chain as the heli (see note there) so
+            // stop/mute is genuinely silent.
+            const noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+            const data = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+            const noiseSource = audioCtx.createBufferSource();
+            noiseSource.buffer = noiseBuffer; noiseSource.loop = true;
+
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = "lowpass"; noiseFilter.frequency.setValueAtTime(750, audioCtx.currentTime);
+
+            // Slow drift of the cutoff keeps the wash "moving" (a filter param — silent when the master is 0).
+            const cutoffLFO = audioCtx.createOscillator(); const cutoffDepth = audioCtx.createGain();
+            cutoffLFO.type = "sine"; cutoffLFO.frequency.setValueAtTime(0.12, audioCtx.currentTime);
+            cutoffDepth.gain.setValueAtTime(220, audioCtx.currentTime);
+            cutoffLFO.connect(cutoffDepth); cutoffDepth.connect(noiseFilter.frequency); cutoffLFO.start();
+
+            // Deep, slow breathing swell — the wave rhythm itself.
+            const swellInner = audioCtx.createGain(); swellInner.gain.setValueAtTime(0.55, audioCtx.currentTime);
+            const swellDepth = audioCtx.createGain(); swellDepth.gain.setValueAtTime(0.45, audioCtx.currentTime);
+            const swellLFO = audioCtx.createOscillator();
+            swellLFO.type = "sine"; swellLFO.frequency.setValueAtTime(0.08, audioCtx.currentTime);
+            swellLFO.connect(swellDepth); swellDepth.connect(swellInner.gain); swellLFO.start();
+
+            const waveGain = audioCtx.createGain();
+            waveGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            noiseSource.connect(noiseFilter); noiseFilter.connect(swellInner); swellInner.connect(waveGain); waveGain.connect(audioCtx.destination); noiseSource.start();
+
+            // Light wind: soft dull lowpass layer with its own gentle drift.
+            const windBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+            const windData = windBuffer.getChannelData(0);
+            for (let i = 0; i < windData.length; i++) windData[i] = Math.random() * 2 - 1;
+            const windSource = audioCtx.createBufferSource();
+            windSource.buffer = windBuffer; windSource.loop = true;
+            const windFilter = audioCtx.createBiquadFilter();
+            windFilter.type = "lowpass"; windFilter.frequency.setValueAtTime(500, audioCtx.currentTime);
+            const windInner = audioCtx.createGain(); windInner.gain.setValueAtTime(0.7, audioCtx.currentTime);
+            const windLfoDepth = audioCtx.createGain(); windLfoDepth.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            const windLfoOsc = audioCtx.createOscillator();
+            windLfoOsc.type = "sine"; windLfoOsc.frequency.setValueAtTime(0.07, audioCtx.currentTime);
+            windLfoOsc.connect(windLfoDepth); windLfoDepth.connect(windInner.gain); windLfoOsc.start();
+            const windGain = audioCtx.createGain();
+            windGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            windSource.connect(windFilter); windFilter.connect(windInner); windInner.connect(windGain); windGain.connect(audioCtx.destination); windSource.start();
+
+            return { waveGain, windGain };
+        }
+
+        function rampGainTo(node, value, seconds) {
+            if (node && audioCtx) node.gain.linearRampToValueAtTime(value, audioCtx.currentTime + seconds);
+        }
+
+        function stopTourAudio(tourType, fast) {
+            const dur = fast ? 0.15 : 0.5;
+            if (tourType === 'heli' && heliNodes) { rampGainTo(heliNodes.gainNode, 0, dur); rampGainTo(heliNodes.rotorGain, 0, dur); rampGainTo(heliNodes.chopGain, 0, dur); rampGainTo(heliNodes.windGain, 0, dur); }
+            if (tourType === 'yacht' && yachtNodes) { rampGainTo(yachtNodes.waveGain, 0, dur); rampGainTo(yachtNodes.windGain, 0, dur); }
+        }
+
+        function setAudioPlayback(start) {
+            const tourType = activeTourType; // 'heli' | 'yacht' — read at call time so Pause/Mute/Exit always affect whichever tour is current
+            if (start && !isMuted) {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+                // Required mobile unlock: playing a silent buffer synchronously inside this tap
+                // reliably unlocks the hardware audio output on iOS Safari (resume() alone is not
+                // always sufficient). Errors here are logged, not swallowed, per requirement.
+                try {
+                    const silentBuffer = audioCtx.createBuffer(1, 1, 22050);
+                    const silentSource = audioCtx.createBufferSource();
+                    silentSource.buffer = silentBuffer;
+                    silentSource.connect(audioCtx.destination);
+                    silentSource.start(0);
+                } catch (err) {
+                    console.error('Audio unlock (silent buffer) failed:', err);
+                }
+
+                // Nodes are created/reused only AFTER resume() actually resolves — starting audio
+                // on a still-suspended context is unreliable on mobile, and scheduling gain ramps
+                // before resume() resolves reads a stale, frozen currentTime.
+                Promise.resolve(audioCtx.resume()).then(() => {
+                    // Switching tours: stop the previous tour's sound before starting the new one,
+                    // so helicopter and yacht audio never play together.
+                    if (activeAudioTour && activeAudioTour !== tourType) stopTourAudio(activeAudioTour, true);
+                    activeAudioTour = tourType;
+
+                    if (tourType === 'heli') {
+                        if (!heliNodes) heliNodes = buildHeliNodes();
+                        if (!isMuted) { rampGainTo(heliNodes.gainNode, 0.25, 1.0); rampGainTo(heliNodes.rotorGain, 0.055, 1.0); rampGainTo(heliNodes.chopGain, 0.10, 1.0); rampGainTo(heliNodes.windGain, 0.025, 1.0); }
+                    } else {
+                        if (!yachtNodes) yachtNodes = buildYachtNodes();
+                        if (!isMuted) { rampGainTo(yachtNodes.waveGain, 0.22, 1.2); rampGainTo(yachtNodes.windGain, 0.05, 1.2); }
+                    }
+                }).catch(err => {
+                    console.error('Audio resume failed:', err); // surfaced, not silently swallowed
+                });
+            } else {
+                stopTourAudio('heli', false);
+                stopTourAudio('yacht', false);
+            }
+        }
+
+        // --- INTERACTION HUD GENERATION ENGINE ---
+        function buildUI() {
+            const list = document.getElementById('menu-list');
+            const labelsContainer = document.getElementById('labels-container');
+
+            LANDMARKS_CONFIG.forEach(cfg => {
+                const li = document.createElement('li');
+                li.className = 'menu-item'; li.dataset.id = cfg.id;
+                li.innerHTML = `<span>${cfg.name}</span><span>➔</span>`;
+                li.addEventListener('click', () => { if(currentMode === "explore" && !tourActive) jumpToDestination(cfg.id); });
+                list.appendChild(li);
+
+                // Landmark Labels setup mapping overlay references dynamically
+                const lbl = document.createElement('div');
+                lbl.className = 'spatial-label'; lbl.innerText = cfg.name;
+                lbl.id = `label-${cfg.id}`;
+                lbl.addEventListener('click', () => { if(currentMode === "explore" && !tourActive) jumpToDestination(cfg.id); });
+                labelsContainer.appendChild(lbl);
+            });
+
+            const exploreBtn = document.getElementById('btn-mode-explore');
+            const tourBtn = document.getElementById('btn-mode-tour');
+            const yachtBtn = document.getElementById('btn-mode-yacht');
+            const navPanel = document.getElementById('landmark-panel');
+            const infoCard = document.getElementById('info-card');
+            const closeBtn = document.getElementById('card-close');
+            
+            // Dynamic controls array elements selectors
+            const pauseBtn = document.getElementById('btn-tour-pause');
+            const prevBtn = document.getElementById('btn-tour-prev');
+            const nextBtn = document.getElementById('btn-tour-next');
+            const muteBtn = document.getElementById('btn-tour-mute');
+            const exitBtn = document.getElementById('btn-tour-exit');
+
+            function toggleTourControlsDOM(show) {
+                document.querySelectorAll('.tour-ctrl').forEach(el => el.style.display = show ? 'inline-block' : 'none');
+            }
+
+            exploreBtn.addEventListener('click', () => {
+                currentMode = "explore"; tourActive = false; tourPaused = false; returningToTour = false;
+                exploreBtn.classList.add('active'); tourBtn.classList.remove('active'); yachtBtn.classList.remove('active');
+                navPanel.style.display = "flex"; infoCard.style.display = "none";
+                toggleTourControlsDOM(false); closeBtn.style.display = '';
+                controls.enabled = true; controls.target.copy(currentLookAt); controls.update();
+                isInterpolating = false; setAudioPlayback(false);
+                yachtBowGroup.visible = false;
+            });
+
+            tourBtn.addEventListener('click', () => {
+                currentMode = "tour"; tourBtn.classList.add('active'); exploreBtn.classList.remove('active'); yachtBtn.classList.remove('active');
+                navPanel.style.display = "none"; toggleTourControlsDOM(true); closeBtn.style.display = 'none';
+                pauseBtn.innerText = "Pause"; controls.enabled = false;
+                activeTourType = 'heli';
+                tourTime = 0; tourActive = true; tourPaused = false; returningToTour = false; isInterpolating = true;
+                targetCamPos.copy(tourSpline.getPointAt(0)); targetLookAt.copy(splineLookTargets[0]);
+                setAudioPlayback(true);
+                yachtBowGroup.visible = false;
+
+                const firstLandmark = LANDMARKS_CONFIG[0]; activeId = firstLandmark.id;
+                document.getElementById('card-title').innerText = firstLandmark.name;
+                formatShortenedTextDescription(firstLandmark);
+                infoCard.style.display = 'flex'; infoCard.classList.remove('pos-left'); infoCard.classList.add('pos-right');
+            });
+
+            yachtBtn.addEventListener('click', () => {
+                currentMode = "tour"; yachtBtn.classList.add('active'); exploreBtn.classList.remove('active'); tourBtn.classList.remove('active');
+                navPanel.style.display = "none"; toggleTourControlsDOM(true); closeBtn.style.display = 'none';
+                pauseBtn.innerText = "Pause"; controls.enabled = false;
+                activeTourType = 'yacht';
+                tourTime = 0; yachtDirection = 1; tourActive = true; tourPaused = false; returningToTour = false; isInterpolating = true;
+                targetCamPos.copy(yachtSpline.getPointAt(0)); targetLookAt.copy(yachtLookTargets[0]);
+                setAudioPlayback(true);
+                yachtBowGroup.visible = true;
+
+                const firstLandmark = YACHT_ROUTE_CFGS[0]; activeId = firstLandmark.id;
+                document.getElementById('card-title').innerText = firstLandmark.name;
+                formatShortenedTextDescription(firstLandmark);
+                infoCard.style.display = 'flex'; infoCard.classList.remove('pos-left'); infoCard.classList.add('pos-right');
+            });
+
+            pauseBtn.addEventListener('click', () => {
+                if (!tourActive) return;
+                if (!tourPaused) {
+                    tourPaused = true; returningToTour = false; pausedTourTime = tourTime;
+                    savedTourPosition.copy(camera.position); savedTourLookTarget.copy(currentLookAt);
+                    controls.enabled = true; controls.target.copy(currentLookAt);
+                    setAudioPlayback(false); pauseBtn.innerText = "Resume";
+                } else {
+                    controls.enabled = false; returningToTour = true;
+                    targetCamPos.copy(savedTourPosition); targetLookAt.copy(savedTourLookTarget);
+                    setAudioPlayback(true); pauseBtn.innerText = "Pause";
+                }
+            });
+
+            // Operational Tour Core Controls Listeners
+            prevBtn.addEventListener('click', () => {
+                if (!tourActive) return;
+                // Yacht's route is non-closed and ping-pongs; wrapping with modulo here would
+                // reintroduce the same awkward jump this turn fixes for the end-of-route loop.
+                tourTime = activeTourType === 'yacht' ? Math.max(0, tourTime - (3 / 15)) : (tourTime - (3 / 15) + 1.0) % 1.0;
+                tourPaused = false; returningToTour = false; isInterpolating = true;
+            });
+            nextBtn.addEventListener('click', () => {
+                if (!tourActive) return;
+                tourTime = activeTourType === 'yacht' ? Math.min(1, tourTime + (3 / 15)) : (tourTime + (3 / 15)) % 1.0;
+                tourPaused = false; returningToTour = false; isInterpolating = true;
+            });
+            muteBtn.addEventListener('click', () => {
+                isMuted = !isMuted; muteBtn.innerText = isMuted ? "Unmute" : "Mute";
+                // returningToTour counts as playing: during the resume fly-back tourPaused is
+                // still true until the camera reaches the path, so without this an unmute in
+                // that window would never restart the audio (Resume itself starts audio during
+                // the same fly-back, so this keeps the two controls consistent).
+                setAudioPlayback(!isMuted && tourActive && (!tourPaused || returningToTour));
+            });
+            exitBtn.addEventListener('click', () => exploreBtn.click());
+
+            // "Close details": stops propagation so the click can never also trigger the
+            // mobile card's own expand/collapse toggle listener below, cancels any in-flight
+            // fly-to camera motion, and fully resets expand/active state. Hidden during tours
+            // (see toggleTourControlsDOM/closeBtn.style.display above) since tour cards persist.
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (tourActive) return;
+                infoCard.style.display = 'none';
+                infoCard.classList.remove('expanded');
+                fullDescriptionExpanded = false;
+                document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                activeId = null;
+                isInterpolating = false;
+            });
+
+            // Mobile: card shows only the title by default; tap anywhere on it (except
+            // Close/Read more) to expand or collapse the description. Never auto-expands.
+            infoCard.addEventListener('click', (e) => {
+                if (window.innerWidth > 768) return;
+                if (e.target.closest('#card-close') || e.target.closest('.read-more-toggle')) return;
+                infoCard.classList.toggle('expanded');
+            });
+            
+            // Collapsible Bottom Sheet trigger engine allocation mapping
+            const sheetTrigger = document.getElementById('sheet-trigger');
+            sheetTrigger.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    navPanel.classList.toggle('expanded');
+                }
+            });
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta(); const timeElapsed = clock.getElapsedTime();
+
+            if (currentMode === "explore") {
+                if (isInterpolating) {
+                    camera.position.lerp(targetCamPos, 4.0 * delta); currentLookAt.lerp(targetLookAt, 4.0 * delta);
+                    controls.target.copy(currentLookAt); camera.lookAt(currentLookAt);
+                    if (camera.position.distanceTo(targetCamPos) < 0.25 && currentLookAt.distanceTo(targetLookAt) < 0.25) {
+                        isInterpolating = false; controls.target.copy(targetLookAt); 
+                    }
+                }
+                controls.target.x = THREE.MathUtils.clamp(controls.target.x, -2200, 2200);
+                controls.target.y = THREE.MathUtils.clamp(controls.target.y, 0, 800); 
+                controls.target.z = THREE.MathUtils.clamp(controls.target.z, -1800, 1800);
+                controls.update(); if (!isInterpolating) currentLookAt.copy(controls.target);
+            } 
+            else if (currentMode === "tour" && tourActive) {
+                if (tourPaused) {
+                    if (returningToTour) {
+                        camera.position.lerp(targetCamPos, 3.5 * delta); currentLookAt.lerp(targetLookAt, 3.5 * delta);
+                        camera.lookAt(currentLookAt); controls.target.copy(currentLookAt);
+                        if (camera.position.distanceTo(targetCamPos) < 0.3 && currentLookAt.distanceTo(targetLookAt) < 0.3) {
+                            returningToTour = false; tourPaused = false; tourTime = pausedTourTime; 
+                        }
+                    } else {
+                        controls.target.x = THREE.MathUtils.clamp(controls.target.x, -2200, 2200);
+                        controls.target.y = THREE.MathUtils.clamp(controls.target.y, 0, 800);
+                        controls.target.z = THREE.MathUtils.clamp(controls.target.z, -1800, 1800);
+                        controls.update(); camera.lookAt(controls.target); currentLookAt.copy(controls.target);
+                    }
+                } else if (isInterpolating) {
+                    camera.position.lerp(targetCamPos, 2.5 * delta); currentLookAt.lerp(targetLookAt, 2.5 * delta);
+                    camera.lookAt(currentLookAt);
+                    if (camera.position.distanceTo(targetCamPos) < 2.0) isInterpolating = false;
+                } else {
+                    const isYacht = activeTourType === 'yacht';
+
+                    if (isYacht) {
+                        // Non-closed spline: ping-pong instead of wrapping or restarting. Wrapping
+                        // with modulo would cut a diagonal shortcut across the map; snapping back to
+                        // the start reads as an awkward jump. Reversing direction in place at each
+                        // end is smooth by construction — position never jumps, only the direction
+                        // of travel flips — and the boat simply retraces the same safe coastal path.
+                        tourTime += yachtDirection * (delta / YACHT_TOUR_DURATION);
+                        if (tourTime >= 1.0) { tourTime = 1.0; yachtDirection = -1; }
+                        else if (tourTime <= 0.0) { tourTime = 0.0; yachtDirection = 1; }
+
+                        const segCount = yachtLookTargets.length - 1;
+                        const segmentProgress = tourTime * segCount;
+                        const baseIndex = Math.min(Math.max(Math.floor(segmentProgress), 0), segCount - 1);
+                        const nextIndex = Math.min(baseIndex + 1, segCount);
+                        const segmentAlpha = segmentProgress - baseIndex;
+
+                        const rawSplinePos = yachtSpline.getPointAt(tourTime);
+                        const interpolatedSplineLook = new THREE.Vector3().lerpVectors(yachtLookTargets[baseIndex], yachtLookTargets[nextIndex], segmentAlpha);
+
+                        // Slow, gentle bob + sway on the water (distinct from the heli's fast engine vibration below).
+                        const motionOffset = new THREE.Vector3(Math.sin(timeElapsed * 0.7) * 0.6, Math.sin(timeElapsed * 1.1) * 0.9 + 0.3, Math.cos(timeElapsed * 0.5) * 0.4);
+                        camera.position.copy(rawSplinePos).add(motionOffset);
+                        currentLookAt.lerp(interpolatedSplineLook, 3.0 * delta); camera.lookAt(currentLookAt); // always looking inland at the current landmark
+
+                        const yachtLandmarkId = yachtLookIds[baseIndex];
+                        if (activeId !== yachtLandmarkId) {
+                            activeId = yachtLandmarkId;
+                            const cfg = LANDMARKS_CONFIG.find(c => c.id === yachtLandmarkId);
+                            document.getElementById('card-title').innerText = cfg.name;
+                            formatShortenedTextDescription(cfg);
+                        }
+                    } else {
+                        tourTime += (delta / HELI_TOUR_DURATION);
+                        // Closed spline (Helicopter Tour): always normalise into [0,1) — a single
+                        // "if" subtraction could leave tourTime > 1 after a large delta spike (tab
+                        // backgrounded, mobile jank), which used to feed CatmullRomCurve3.getPointAt(u>1)
+                        // and throw inside three.js's arc-length lookup. See prior QA notes.
+                        tourTime = ((tourTime % 1.0) + 1.0) % 1.0;
+
+                        const segmentProgress = tourTime * 15;
+                        const baseIndex = Math.floor(segmentProgress) % 15;
+                        const nextIndex = (baseIndex + 1) % 15; const segmentAlpha = segmentProgress - Math.floor(segmentProgress);
+
+                        const rawSplinePos = tourSpline.getPointAt(tourTime);
+                        const interpolatedSplineLook = new THREE.Vector3().lerpVectors(splineLookTargets[baseIndex], splineLookTargets[nextIndex], segmentAlpha);
+
+                        // Smooth, slow altitude swell (gentle rise/fall) plus a faint high-frequency
+                        // texture for engine feel — much smaller amplitude than before so it reads
+                        // as vibration, not shaking or a sudden jump.
+                        const altitudeSwell = Math.sin(timeElapsed * 0.35) * 6.0;
+                        const microJitter = new THREE.Vector3(Math.cos(timeElapsed * 1.8) * 0.15, Math.sin(timeElapsed * 2.2) * 0.2, 0);
+                        camera.position.copy(rawSplinePos).add(microJitter);
+                        camera.position.y += altitudeSwell;
+                        currentLookAt.lerp(interpolatedSplineLook, 3.0 * delta);
+
+                        // Subtle banking into turns: sample the spline's tangent a moment ahead to
+                        // estimate turn direction/rate, then ease the roll toward a small target
+                        // angle — currentBank only ever moves a fraction of the way there each
+                        // frame, so it can never snap or jump even on a sharp turn.
+                        const tangentNow = tourSpline.getTangentAt(tourTime);
+                        const tangentAhead = tourSpline.getTangentAt(((tourTime + 0.004) % 1.0 + 1.0) % 1.0);
+                        const turnAmount = tangentNow.x * tangentAhead.z - tangentNow.z * tangentAhead.x; // signed turn rate
+                        const bankTarget = THREE.MathUtils.clamp(turnAmount * 45, -0.11, 0.11);
+                        currentBank += (bankTarget - currentBank) * 2.5 * delta;
+                        camera.up.set(Math.sin(currentBank), Math.cos(currentBank), 0);
+                        camera.lookAt(currentLookAt);
+                        camera.up.set(0, 1, 0); // reset so Explore/OrbitControls/Yacht are never affected
+
+                        const currentLandmarkIndex = Math.floor(segmentProgress / 3) % LANDMARKS_CONFIG.length;
+                        const matchedLandmarkNode = LANDMARKS_CONFIG[currentLandmarkIndex];
+
+                        if (matchedLandmarkNode.id === "moft") {
+                            const raycaster = new THREE.Raycaster();
+                            const dir = new THREE.Vector3().subVectors(matchedLandmarkNode.runtimeGroup.position, camera.position).normalize();
+                            raycaster.set(camera.position, dir);
+                            const blocksIntersections = raycaster.intersectObject(backgroundMeshInstance);
+                            if(blocksIntersections.length > 0 && blocksIntersections[0].distance < camera.position.distanceTo(matchedLandmarkNode.runtimeGroup.position)) {
+                                camera.position.y += 28 * delta; 
+                            }
+                        }
+
+                        if (activeId !== matchedLandmarkNode.id) {
+                            activeId = matchedLandmarkNode.id;
+                            document.getElementById('card-title').innerText = matchedLandmarkNode.name;
+                            formatShortenedTextDescription(matchedLandmarkNode);
+                        }
+                    }
+                }
+            }
+
+            // --- SPATIAL LABEL COORDINATE PIN DRAW OVERLAYS ---
+            const tempV = new THREE.Vector3();
+            LANDMARKS_CONFIG.forEach(cfg => {
+                const labelEl = document.getElementById(`label-${cfg.id}`);
+                if (!labelEl) return;
+                
+                if (currentMode === "tour" && tourActive) {
+                    labelEl.style.display = 'none'; // Clear pins out completely inside automated cinematic flights
+                    return;
+                }
+
+                tempV.set(cfg.pos[0], cfg.pos[1] + cfg.lblOffset, cfg.pos[2]);
+                tempV.project(camera);
+
+                // Cull pins resting completely outside projection frustum view parameters
+                if (Math.abs(tempV.x) > 1 || Math.abs(tempV.y) > 1 || tempV.z > 1) {
+                    labelEl.style.display = 'none';
+                } else {
+                    labelEl.style.display = 'block';
+                    labelEl.style.left = `${(tempV.x + 1) * window.innerWidth / 2}px`;
+                    labelEl.style.top = `${(-tempV.y + 1) * window.innerHeight / 2}px`;
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
